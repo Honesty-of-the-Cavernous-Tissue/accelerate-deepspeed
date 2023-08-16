@@ -1,0 +1,44 @@
+2023-08-14 16:31:21,767 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Current SDK version is 0.15.8
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Configure stats pid to 396505
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Loading settings from /home/zhangyaqing/.config/wandb/settings
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Loading settings from /work/zhangyaqing/ChatGLM2-6B/accelerate_deepspeed/outputs/2023-08-14/16-31-18/wandb/settings
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2023-08-14 16:31:21,768 WARNING MainThread:396505 [wandb_setup.py:_flush():76] Could not save program above cwd: /work/zhangyaqing/ChatGLM2-6B/accelerate_deepspeed/peft_lora_acc_ds_zero.py
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': None, 'program': '/work/zhangyaqing/ChatGLM2-6B/accelerate_deepspeed/peft_lora_acc_ds_zero.py'}
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Applying login settings: {'api_key': '***REDACTED***'}
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_setup.py:_flush():76] Applying login settings: {'api_key': '***REDACTED***'}
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_init.py:_log_setup():507] Logging user logs to /work/zhangyaqing/ChatGLM2-6B/accelerate_deepspeed/outputs/2023-08-14/16-31-18/wandb/run-20230814_163121-jklg1efo/logs/debug.log
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_init.py:_log_setup():508] Logging internal logs to /work/zhangyaqing/ChatGLM2-6B/accelerate_deepspeed/outputs/2023-08-14/16-31-18/wandb/run-20230814_163121-jklg1efo/logs/debug-internal.log
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_init.py:init():547] calling init triggers
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_init.py:init():554] wandb.init called with sweep_config: {}
+config: {'_metadata': ContainerMetadata(ref_type=typing.Any, object_type=<class 'dict'>, optional=True, key=None, flags={'struct': True}, flags_root=False, resolver_cache=defaultdict(<class 'dict'>, {'now': {('%Y-%m-%d',): '2023-08-14', ('%H-%M-%S',): '16-31-18'}}), key_type=typing.Any, element_type=typing.Any), '_parent': None, '_flags_cache': {'struct': True}, '_content': {'seed': 42, 'lr': 5e-05, 'batch_size': 1, 'num_epochs': 4, 'max_length': 2048, 'skip_overlong': True, 'save_per_steps': 200, 'data_percentage': 1, 'label_column_name': 'output', 'prompt_column_name': 'input', 'model_save_path': 'lora_model/tax/', 'data_path': '/work/zhangyaqing/data/Tax/tax.json', 'pretrain_model_name': 'chatglm', 'model_name_or_path': '/work/zhangyaqing/models/chatglm2-6b'}}
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_init.py:init():596] starting backend
+2023-08-14 16:31:21,768 INFO    MainThread:396505 [wandb_init.py:init():600] setting up manager
+2023-08-14 16:31:21,770 INFO    MainThread:396505 [backend.py:_multiprocessing_setup():106] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2023-08-14 16:31:21,771 INFO    MainThread:396505 [wandb_init.py:init():606] backend started and connected
+2023-08-14 16:31:22,981 ERROR   MainThread:396505 [wandb_init.py:init():1175] error
+Traceback (most recent call last):
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_init.py", line 1147, in init
+    run = wi.init()
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_init.py", line 611, in init
+    run = Run(
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 537, in __init__
+    self._init(
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 653, in _init
+    self._config._update(config, ignore_locked=True)
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_config.py", line 177, in _update
+    sanitized = self._sanitize_dict(
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_config.py", line 237, in _sanitize_dict
+    k, v = self._sanitize(k, v, allow_val_change)
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/sdk/wandb_config.py", line 255, in _sanitize
+    val = json_friendly_val(val)
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/site-packages/wandb/util.py", line 663, in json_friendly_val
+    converted = asdict(val)
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/dataclasses.py", line 1238, in asdict
+    return _asdict_inner(obj, dict_factory)
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/dataclasses.py", line 1245, in _asdict_inner
+    value = _asdict_inner(getattr(obj, f.name), dict_factory)
+  File "/home/zhangyaqing/zhangyaqing/miniconda3/envs/ChatGLM2-6B/lib/python3.10/dataclasses.py", line 1275, in _asdict_inner
+    return type(obj)((_asdict_inner(k, dict_factory),
+TypeError: first argument must be callable or None
+2023-08-14 16:31:25,967 WARNING MsgRouterThr:396505 [router.py:message_loop():77] message_loop has been closed

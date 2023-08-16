@@ -1,0 +1,23 @@
+seed: 42
+lr: 5.0e-5
+batch_size: 1
+num_epochs: 4
+max_length: 2048
+skip_overlong: true
+save_per_steps: 200
+data_percentage: 1
+
+
+label_column_name: 'output'
+prompt_column_name: 'input'
+model_save_path: 'lora_model'
+data_path: '/work/zhangyaqing/data/Tax/tax.json'
+
+
+# *Optional*
+pretrain_model_name: 'chatglm'
+#  - 'llama'
+#  - 'baichuan'
+
+model_name_or_path: '/work/zhangyaqing/models/chatglm2-6b'
+#  - '/work/zhangyaqing/models/llama-2-13b'

@@ -1,0 +1,1085 @@
+
+-------------------------- DeepSpeed Flops Profiler --------------------------
+Profile Summary at step 2:
+Notations:
+data parallel size (dp_size), model parallel size(mp_size),
+number of parameters (params), number of multiply-accumulate operations(MACs),
+number of floating-point operations (flops), floating-point operations per second (FLOPS),
+fwd latency (forward propagation latency), bwd latency (backward propagation latency),
+step (weights update latency), iter latency (sum of fwd, bwd and step latency)
+
+world size:                                                   1       
+data parallel size:                                           1       
+model parallel size:                                          1       
+batch size per GPU:                                           1       
+params per gpu:                                               0       
+params of model = params per GPU * mp_size:                   0       
+fwd MACs per GPU:                                             2056.72 GMACs
+fwd flops per GPU:                                            4113.5 G
+fwd flops of model = fwd flops per GPU * mp_size:             4113.5 G
+fwd latency:                                                  1.52 s  
+fwd FLOPS per GPU = fwd flops per GPU / fwd latency:          2.71 TFLOPS
+bwd latency:                                                  1.21 s  
+bwd FLOPS per GPU = 2.0 * fwd flops per GPU / bwd latency:    6.8 TFLOPS
+fwd+bwd FLOPS per GPU = 3.0 * fwd flops per GPU / (fwd+bwd latency):   4.53 TFLOPS
+step latency:                                                 49.0 ms 
+iter latency:                                                 2.77 s  
+FLOPS per GPU = 3.0 * fwd flops per GPU / iter latency:       4.45 TFLOPS
+samples/second:                                               0.36    
+
+----------------------------- Aggregated Profile per GPU -----------------------------
+Top 1 modules in terms of params, MACs or fwd latency at different model depths:
+depth 0:
+    params      - {'PeftModelForCausalLM': '0'}
+    MACs        - {'PeftModelForCausalLM': '2056.72 GMACs'}
+    fwd latency - {'PeftModelForCausalLM': '0'}
+depth 1:
+    params      - {'LoraModel': '0'}
+    MACs        - {'LoraModel': '2056.72 GMACs'}
+    fwd latency - {'LoraModel': '0'}
+depth 2:
+    params      - {'ChatGLMForConditionalGeneration': '0'}
+    MACs        - {'ChatGLMForConditionalGeneration': '2056.72 GMACs'}
+    fwd latency - {'ChatGLMForConditionalGeneration': '1.46 s'}
+depth 3:
+    params      - {'ChatGLMModel': '0'}
+    MACs        - {'ChatGLMModel': '2056.72 GMACs'}
+    fwd latency - {'ChatGLMModel': '1.46 s'}
+depth 4:
+    params      - {'Embedding': '0'}
+    MACs        - {'GLMTransformer': '1965.1 GMACs'}
+    fwd latency - {'GLMTransformer': '1.42 s'}
+depth 5:
+    params      - {'Embedding': '0'}
+    MACs        - {'ModuleList': '1965.1 GMACs'}
+    fwd latency - {'ModuleList': '1.27 s'}
+depth 6:
+    params      - {'GLMBlock': '0'}
+    MACs        - {'GLMBlock': '1965.1 GMACs'}
+    fwd latency - {'GLMBlock': '1.27 s'}
+depth 7:
+    params      - {'RMSNorm': '0'}
+    MACs        - {'MLP': '1621.03 GMACs'}
+    fwd latency - {'SelfAttention': '365.33 ms'}
+depth 8:
+    params      - {'Linear': '0'}
+    MACs        - {'Linear': '1965.1 GMACs'}
+    fwd latency - {'Linear': '247.59 ms'}
+depth 9:
+    params      - {'ModuleDict': '0'}
+    MACs        - {'ModuleDict': '670.7 MMACs'}
+    fwd latency - {'ModuleDict': '55.89 ms'}
+
+------------------------------ Detailed Profile per GPU ------------------------------
+Each module profile is listed after its name in the following order: 
+params, percentage of total params, MACs, percentage of total MACs, fwd latency, percentage of total fwd latency, fwd FLOPS
+
+Note: 1. A module can have torch.nn.module or torch.nn.functional to compute logits (e.g. CrossEntropyLoss). They are not counted as submodules, thus not to be printed out. However they make up the difference between a parent's MACs (or latency) and the sum of its submodules'.
+2. Number of floating-point operations is a theoretical estimation, thus FLOPS computed using that could be larger than the maximum system throughput.
+3. The fwd latency listed in the top module's profile is directly captured at the module forward function in PyTorch, thus it's less than the fwd latency shown above which is captured in DeepSpeed.
+
+PeftModelForCausalLM(
+  0, 0.00% Params, 2056.72 GMACs, 100.00% MACs, 0, 0.00% latency, 0.0 FLOPS, 
+  (base_model): LoraModel(
+    0, 0.00% Params, 2056.72 GMACs, 100.00% MACs, 0, 0.00% latency, 0.0 FLOPS, 
+    (model): ChatGLMForConditionalGeneration(
+      0, 0.00% Params, 2056.72 GMACs, 100.00% MACs, 1.46 s, 0.00% latency, 2.82 TFLOPS, 
+      (transformer): ChatGLMModel(
+        0, 0.00% Params, 2056.72 GMACs, 100.00% MACs, 1.46 s, 0.00% latency, 2.82 TFLOPS, 
+        (embedding): Embedding(
+          0, 0.00% Params, 0 MACs, 0.00% MACs, 11.52 ms, 0.00% latency, 0.0 FLOPS, 
+          (word_embeddings): Embedding(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.04 ms, 0.00% latency, 0.0 FLOPS, 65024, 4096)
+        )
+        (rotary_pos_emb): RotaryEmbedding(0, 0.00% Params, 0 MACs, 0.00% MACs, 2.37 ms, 0.00% latency, 0.0 FLOPS, )
+        (encoder): GLMTransformer(
+          0, 0.00% Params, 1965.1 GMACs, 95.55% MACs, 1.42 s, 0.00% latency, 2.77 TFLOPS, 
+          (layers): ModuleList(
+            (0): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 124.31 ms, 0.00% latency, 1.13 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.02 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 70.25 ms, 0.00% latency, 349.86 GFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 41.15 ms, 0.00% latency, 316.74 GFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 982.52 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 982.52 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 1.04 ms, 0.00% latency, 21.67 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 1.04 ms, 0.00% latency, 21.67 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 792.98 us, 0.00% latency, 31.98 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 792.98 us, 0.00% latency, 31.98 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 724.55 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 983.48 us, 0.00% latency, 11.74 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 987.29 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 24.48 ms, 0.00% latency, 4.73 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 949.62 us, 0.00% latency, 81.29 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 926.02 us, 0.00% latency, 41.68 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (1): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 125.71 ms, 0.00% latency, 1.12 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 984.19 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 77.91 ms, 0.00% latency, 315.45 GFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 25.7 ms, 0.00% latency, 507.2 GFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 661.13 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 661.13 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 1.01 ms, 0.00% latency, 22.25 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 1.01 ms, 0.00% latency, 22.25 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 846.39 us, 0.00% latency, 29.97 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 846.39 us, 0.00% latency, 29.97 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 801.32 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 1.16 ms, 0.00% latency, 9.97 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 811.82 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 31.27 ms, 0.00% latency, 3.7 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 987.53 us, 0.00% latency, 78.17 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 971.56 us, 0.00% latency, 39.73 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (2): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.59 ms, 0.00% latency, 3.01 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 897.41 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.83 ms, 0.00% latency, 2.78 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.94 ms, 0.00% latency, 3.31 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 563.38 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 563.38 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 644.92 us, 0.00% latency, 34.96 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 644.92 us, 0.00% latency, 34.96 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 731.23 us, 0.00% latency, 34.68 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 731.23 us, 0.00% latency, 34.68 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 738.86 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 838.04 us, 0.00% latency, 13.77 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.13 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.1 ms, 0.00% latency, 9.57 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 859.02 us, 0.00% latency, 89.86 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 921.73 us, 0.00% latency, 41.87 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (3): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 45.13 ms, 0.00% latency, 3.11 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 913.38 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.11 ms, 0.00% latency, 3.03 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.68 ms, 0.00% latency, 3.54 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 602.25 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 602.25 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 692.61 us, 0.00% latency, 32.55 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 692.61 us, 0.00% latency, 32.55 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 646.35 us, 0.00% latency, 39.24 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 646.35 us, 0.00% latency, 39.24 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 1.17 ms, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 844.48 us, 0.00% latency, 13.67 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 854.97 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.24 ms, 0.00% latency, 9.46 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 882.86 us, 0.00% latency, 87.43 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 968.22 us, 0.00% latency, 39.86 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (4): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.02 ms, 0.00% latency, 3.05 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.02 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 9.22 ms, 0.00% latency, 2.66 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.12 ms, 0.00% latency, 3.17 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 622.51 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 622.51 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 746.25 us, 0.00% latency, 30.21 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 746.25 us, 0.00% latency, 30.21 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 722.41 us, 0.00% latency, 35.11 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 722.41 us, 0.00% latency, 35.11 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 705.0 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 1.11 ms, 0.00% latency, 10.42 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 812.05 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 11.94 ms, 0.00% latency, 9.7 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 830.89 us, 0.00% latency, 92.9 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 812.05 us, 0.00% latency, 47.53 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (5): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.37 ms, 0.00% latency, 3.03 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 982.05 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.67 ms, 0.00% latency, 2.84 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.13 ms, 0.00% latency, 3.15 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 530.0 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 530.0 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 707.39 us, 0.00% latency, 31.87 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 707.39 us, 0.00% latency, 31.87 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 713.11 us, 0.00% latency, 35.57 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 713.11 us, 0.00% latency, 35.57 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 803.23 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 924.35 us, 0.00% latency, 12.49 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 802.76 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.15 ms, 0.00% latency, 9.53 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 918.63 us, 0.00% latency, 84.03 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 910.52 us, 0.00% latency, 42.39 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (6): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.19 ms, 0.00% latency, 3.04 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 899.08 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.47 ms, 0.00% latency, 2.9 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.0 ms, 0.00% latency, 3.26 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 585.79 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 585.79 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 715.26 us, 0.00% latency, 31.52 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 715.26 us, 0.00% latency, 31.52 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 689.03 us, 0.00% latency, 36.81 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 689.03 us, 0.00% latency, 36.81 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 786.3 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 861.17 us, 0.00% latency, 13.4 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.12 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.26 ms, 0.00% latency, 9.44 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 991.11 us, 0.00% latency, 77.88 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 885.25 us, 0.00% latency, 43.6 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (7): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 47.17 ms, 0.00% latency, 2.98 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.33 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 9.26 ms, 0.00% latency, 2.65 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.25 ms, 0.00% latency, 3.06 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 661.37 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 661.37 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 697.61 us, 0.00% latency, 32.32 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 697.61 us, 0.00% latency, 32.32 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 705.96 us, 0.00% latency, 35.93 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 705.96 us, 0.00% latency, 35.93 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 813.96 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 871.42 us, 0.00% latency, 13.25 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.08 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.41 ms, 0.00% latency, 9.33 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 951.53 us, 0.00% latency, 81.12 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 936.75 us, 0.00% latency, 41.2 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (8): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 47.27 ms, 0.00% latency, 2.97 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.63 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.54 ms, 0.00% latency, 2.88 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.97 ms, 0.00% latency, 3.28 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 597.95 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 597.95 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 722.17 us, 0.00% latency, 31.22 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 722.17 us, 0.00% latency, 31.22 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 713.11 us, 0.00% latency, 35.57 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 713.11 us, 0.00% latency, 35.57 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 700.95 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 859.26 us, 0.00% latency, 13.43 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.11 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.29 ms, 0.00% latency, 9.42 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 918.87 us, 0.00% latency, 84.01 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 904.08 us, 0.00% latency, 42.69 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (9): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 47.57 ms, 0.00% latency, 2.95 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 901.46 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.95 ms, 0.00% latency, 2.74 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.32 ms, 0.00% latency, 3.02 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 563.14 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 563.14 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 838.99 us, 0.00% latency, 26.87 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 838.99 us, 0.00% latency, 26.87 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 736.71 us, 0.00% latency, 34.43 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 736.71 us, 0.00% latency, 34.43 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 875.0 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 940.32 us, 0.00% latency, 12.28 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 844.48 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 13.69 ms, 0.00% latency, 8.46 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 929.59 us, 0.00% latency, 83.04 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 988.48 us, 0.00% latency, 39.05 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (10): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.36 ms, 0.00% latency, 3.03 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 851.87 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.74 ms, 0.00% latency, 2.81 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.0 ms, 0.00% latency, 3.26 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 611.07 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 611.07 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 712.39 us, 0.00% latency, 31.65 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 712.39 us, 0.00% latency, 31.65 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 672.82 us, 0.00% latency, 37.7 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 672.82 us, 0.00% latency, 37.7 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 833.27 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 1.01 ms, 0.00% latency, 11.47 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 836.13 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.46 ms, 0.00% latency, 9.29 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 860.45 us, 0.00% latency, 89.71 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 1.11 ms, 0.00% latency, 34.78 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (11): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.91 ms, 0.00% latency, 2.99 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.1 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.85 ms, 0.00% latency, 2.78 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.17 ms, 0.00% latency, 3.12 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 640.15 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 640.15 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 668.53 us, 0.00% latency, 33.72 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 668.53 us, 0.00% latency, 33.72 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 769.85 us, 0.00% latency, 32.94 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 769.85 us, 0.00% latency, 32.94 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 835.9 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 977.28 us, 0.00% latency, 11.81 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 801.09 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.33 ms, 0.00% latency, 9.39 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 882.39 us, 0.00% latency, 87.48 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 1.09 ms, 0.00% latency, 35.57 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (12): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 45.59 ms, 0.00% latency, 3.08 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.05 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.24 ms, 0.00% latency, 2.98 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.06 ms, 0.00% latency, 3.21 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 704.77 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 704.77 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 729.32 us, 0.00% latency, 30.91 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 729.32 us, 0.00% latency, 30.91 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 653.51 us, 0.00% latency, 38.81 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 653.51 us, 0.00% latency, 38.81 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 681.64 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 935.32 us, 0.00% latency, 12.34 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.06 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.2 ms, 0.00% latency, 9.49 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 895.74 us, 0.00% latency, 86.18 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 950.57 us, 0.00% latency, 40.6 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (13): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 49.19 ms, 0.00% latency, 2.85 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.79 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.31 ms, 0.00% latency, 2.96 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.94 ms, 0.00% latency, 3.31 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 605.82 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 605.82 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 748.16 us, 0.00% latency, 30.13 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 748.16 us, 0.00% latency, 30.13 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 676.87 us, 0.00% latency, 37.47 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 676.87 us, 0.00% latency, 37.47 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 643.73 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 958.44 us, 0.00% latency, 12.04 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 3.17 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.68 ms, 0.00% latency, 9.13 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 1.42 ms, 0.00% latency, 54.32 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 918.15 us, 0.00% latency, 42.04 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (14): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 45.89 ms, 0.00% latency, 3.06 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.37 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.17 ms, 0.00% latency, 3.01 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.88 ms, 0.00% latency, 3.36 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 622.27 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 622.27 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 727.18 us, 0.00% latency, 31.0 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 727.18 us, 0.00% latency, 31.0 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 743.15 us, 0.00% latency, 34.13 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 743.15 us, 0.00% latency, 34.13 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 802.28 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 905.75 us, 0.00% latency, 12.74 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.2 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.21 ms, 0.00% latency, 9.48 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 888.35 us, 0.00% latency, 86.89 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 921.25 us, 0.00% latency, 41.9 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (15): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.65 ms, 0.00% latency, 3.01 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.27 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.46 ms, 0.00% latency, 2.9 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.97 ms, 0.00% latency, 3.28 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 572.68 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 572.68 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 732.66 us, 0.00% latency, 30.77 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 732.66 us, 0.00% latency, 30.77 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 644.92 us, 0.00% latency, 39.33 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 644.92 us, 0.00% latency, 39.33 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 728.13 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 885.96 us, 0.00% latency, 13.03 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.2 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.29 ms, 0.00% latency, 9.42 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 910.52 us, 0.00% latency, 84.78 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 931.5 us, 0.00% latency, 41.43 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (16): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.43 ms, 0.00% latency, 3.02 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 884.77 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.59 ms, 0.00% latency, 2.86 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.93 ms, 0.00% latency, 3.32 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 568.87 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 568.87 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 710.73 us, 0.00% latency, 31.72 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 710.73 us, 0.00% latency, 31.72 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 654.22 us, 0.00% latency, 38.77 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 654.22 us, 0.00% latency, 38.77 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 708.82 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 844.48 us, 0.00% latency, 13.67 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.13 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.55 ms, 0.00% latency, 9.22 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 930.55 us, 0.00% latency, 82.95 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 985.15 us, 0.00% latency, 39.18 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (17): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.36 ms, 0.00% latency, 3.03 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 837.8 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.82 ms, 0.00% latency, 2.79 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.06 ms, 0.00% latency, 3.21 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 557.9 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 557.9 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 686.41 us, 0.00% latency, 32.84 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 686.41 us, 0.00% latency, 32.84 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 607.25 us, 0.00% latency, 41.77 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 607.25 us, 0.00% latency, 41.77 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 752.45 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 864.51 us, 0.00% latency, 13.35 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.3 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.37 ms, 0.00% latency, 9.36 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 875.95 us, 0.00% latency, 88.12 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 828.27 us, 0.00% latency, 46.6 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (18): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 47.02 ms, 0.00% latency, 2.99 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.02 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.83 ms, 0.00% latency, 2.78 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.9 ms, 0.00% latency, 3.34 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 567.91 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 567.91 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 720.74 us, 0.00% latency, 31.28 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 720.74 us, 0.00% latency, 31.28 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 634.67 us, 0.00% latency, 39.96 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 634.67 us, 0.00% latency, 39.96 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 740.29 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 1.49 ms, 0.00% latency, 7.76 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 878.33 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.42 ms, 0.00% latency, 9.33 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 1.12 ms, 0.00% latency, 69.08 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 992.77 us, 0.00% latency, 38.88 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (19): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 50.07 ms, 0.00% latency, 2.8 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.27 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 9.07 ms, 0.00% latency, 2.71 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.55 ms, 0.00% latency, 2.86 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 584.36 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 584.36 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 1.06 ms, 0.00% latency, 21.23 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 1.06 ms, 0.00% latency, 21.23 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 628.47 us, 0.00% latency, 40.36 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 628.47 us, 0.00% latency, 40.36 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 904.08 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 975.37 us, 0.00% latency, 11.83 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 935.79 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 15.34 ms, 0.00% latency, 7.55 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 3.97 ms, 0.00% latency, 19.44 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 935.79 us, 0.00% latency, 41.24 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (20): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.85 ms, 0.00% latency, 3.0 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.28 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.78 ms, 0.00% latency, 2.8 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 4.06 ms, 0.00% latency, 3.21 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 616.79 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 616.79 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 696.9 us, 0.00% latency, 32.35 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 696.9 us, 0.00% latency, 32.35 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 633.72 us, 0.00% latency, 40.02 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 633.72 us, 0.00% latency, 40.02 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 689.03 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 922.68 us, 0.00% latency, 12.51 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.22 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.37 ms, 0.00% latency, 9.36 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 894.78 us, 0.00% latency, 86.27 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 1.05 ms, 0.00% latency, 36.83 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (21): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 46.07 ms, 0.00% latency, 3.05 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.18 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 7.95 ms, 0.00% latency, 3.09 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.87 ms, 0.00% latency, 3.37 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 601.05 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 601.05 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 698.57 us, 0.00% latency, 32.27 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 698.57 us, 0.00% latency, 32.27 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 651.36 us, 0.00% latency, 38.94 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 651.36 us, 0.00% latency, 38.94 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 715.02 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 879.05 us, 0.00% latency, 13.13 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.25 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 12.63 ms, 0.00% latency, 9.17 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 914.34 us, 0.00% latency, 84.42 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 1.04 ms, 0.00% latency, 37.22 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (22): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 16.49 ms, 0.00% latency, 8.51 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.13 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 8.46 ms, 0.00% latency, 2.91 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.93 ms, 0.00% latency, 3.32 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 629.9 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 629.9 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 734.09 us, 0.00% latency, 30.71 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 734.09 us, 0.00% latency, 30.71 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 712.87 us, 0.00% latency, 35.58 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 712.87 us, 0.00% latency, 35.58 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 886.2 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 937.46 us, 0.00% latency, 12.31 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.3 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 3.62 ms, 0.00% latency, 31.97 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 892.4 us, 0.00% latency, 86.5 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 1.1 ms, 0.00% latency, 34.95 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (23): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 17.74 ms, 0.00% latency, 7.91 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 824.45 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 7.71 ms, 0.00% latency, 3.19 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.7 ms, 0.00% latency, 3.52 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 570.54 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 570.54 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 683.07 us, 0.00% latency, 33.0 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 683.07 us, 0.00% latency, 33.0 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 643.73 us, 0.00% latency, 39.4 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 643.73 us, 0.00% latency, 39.4 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 826.36 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 882.15 us, 0.00% latency, 13.08 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.59 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 3.04 ms, 0.00% latency, 38.08 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 829.22 us, 0.00% latency, 93.09 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 659.7 us, 0.00% latency, 58.5 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (24): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 13.15 ms, 0.00% latency, 10.68 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 767.71 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 6.9 ms, 0.00% latency, 3.56 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.4 ms, 0.00% latency, 3.83 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 477.79 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 477.79 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 627.04 us, 0.00% latency, 35.95 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 627.04 us, 0.00% latency, 35.95 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 605.34 us, 0.00% latency, 41.9 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 605.34 us, 0.00% latency, 41.9 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 611.07 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 589.37 us, 0.00% latency, 19.58 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 953.67 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 2.8 ms, 0.00% latency, 41.36 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 1.06 ms, 0.00% latency, 73.15 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 608.44 us, 0.00% latency, 63.43 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (25): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 13.62 ms, 0.00% latency, 10.31 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.16 ms, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 7.58 ms, 0.00% latency, 3.24 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.11 ms, 0.00% latency, 4.19 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 478.27 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 478.27 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 597.0 us, 0.00% latency, 37.76 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 597.0 us, 0.00% latency, 37.76 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 550.03 us, 0.00% latency, 46.11 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 550.03 us, 0.00% latency, 46.11 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 1.27 ms, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 530.24 us, 0.00% latency, 21.77 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 664.23 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 2.68 ms, 0.00% latency, 43.24 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 1.04 ms, 0.00% latency, 74.09 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 579.6 us, 0.00% latency, 66.59 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (26): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 12.13 ms, 0.00% latency, 11.57 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 858.31 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 6.28 ms, 0.00% latency, 3.91 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.11 ms, 0.00% latency, 4.19 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 406.5 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 406.5 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 518.08 us, 0.00% latency, 43.51 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 518.08 us, 0.00% latency, 43.51 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 515.94 us, 0.00% latency, 49.16 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 515.94 us, 0.00% latency, 49.16 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 490.9 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 482.8 us, 0.00% latency, 23.91 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 742.67 us, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 2.73 ms, 0.00% latency, 42.37 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 1.06 ms, 0.00% latency, 73.0 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 595.57 us, 0.00% latency, 64.81 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+            (27): GLMBlock(
+              0, 0.00% Params, 70.18 GMACs, 3.41% MACs, 13.84 ms, 0.00% latency, 10.14 TFLOPS, 
+              (input_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 861.64 us, 0.00% latency, 0.0 FLOPS, )
+              (self_attention): SelfAttention(
+                0, 0.00% Params, 12.29 GMACs, 0.60% MACs, 7.36 ms, 0.00% latency, 3.34 TFLOPS, 
+                (query_key_value): Linear(
+                  0, 0.00% Params, 6.52 GMACs, 0.32% MACs, 3.11 ms, 0.00% latency, 4.19 TFLOPS, in_features=4096, out_features=4608, bias=True
+                  (lora_dropout): ModuleDict(
+                    0, 0.00% Params, 0 MACs, 0.00% MACs, 458.0 us, 0.00% latency, 0.0 FLOPS, 
+                    (default): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 458.0 us, 0.00% latency, 0.0 FLOPS, p=0.1, inplace=False)
+                  )
+                  (lora_A): ModuleDict(
+                    0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 552.89 us, 0.00% latency, 40.78 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 11.27 MMACs, 0.00% MACs, 552.89 us, 0.00% latency, 40.78 GFLOPS, in_features=4096, out_features=8, bias=False)
+                  )
+                  (lora_B): ModuleDict(
+                    0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 529.77 us, 0.00% latency, 47.87 GFLOPS, 
+                    (default): Linear(0, 0.00% Params, 12.68 MMACs, 0.00% MACs, 529.77 us, 0.00% latency, 47.87 GFLOPS, in_features=8, out_features=4608, bias=False)
+                  )
+                  (lora_embedding_A): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                  (lora_embedding_B): ParameterDict(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, )
+                )
+                (core_attention): CoreAttention(
+                  0, 0.00% Params, 0 MACs, 0.00% MACs, 469.45 us, 0.00% latency, 0.0 FLOPS, 
+                  (attention_dropout): Dropout(0, 0.00% Params, 0 MACs, 0.00% MACs, 0, 0.00% latency, 0.0 FLOPS, p=0.0, inplace=False)
+                )
+                (dense): Linear(0, 0.00% Params, 5.77 GMACs, 0.28% MACs, 511.88 us, 0.00% latency, 22.55 TFLOPS, in_features=4096, out_features=4096, bias=False)
+              )
+              (post_attention_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.48 ms, 0.00% latency, 0.0 FLOPS, )
+              (mlp): MLP(
+                0, 0.00% Params, 57.89 GMACs, 2.81% MACs, 2.52 ms, 0.00% latency, 46.02 TFLOPS, 
+                (dense_h_to_4h): Linear(0, 0.00% Params, 38.6 GMACs, 1.88% MACs, 838.28 us, 0.00% latency, 92.08 TFLOPS, in_features=4096, out_features=27392, bias=False)
+                (dense_4h_to_h): Linear(0, 0.00% Params, 19.3 GMACs, 0.94% MACs, 605.11 us, 0.00% latency, 63.78 TFLOPS, in_features=13696, out_features=4096, bias=False)
+              )
+            )
+          )
+          (final_layernorm): RMSNorm(0, 0.00% Params, 0 MACs, 0.00% MACs, 1.08 ms, 0.00% latency, 0.0 FLOPS, )
+        )
+        (output_layer): Linear(0, 0.00% Params, 91.62 GMACs, 4.45% MACs, 2.04 ms, 0.00% latency, 89.78 TFLOPS, in_features=4096, out_features=65024, bias=False)
+      )
+    )
+  )
+)
+------------------------------------------------------------------------------
