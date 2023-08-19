@@ -1,58 +1,50 @@
 import glob
 import json
-from tqdm import tqdm
 import torch
+import os.path
+import collections
+from tqdm import tqdm
+from utils import load_model_on_gpus
+from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, AutoModel
 
-tokenizer = AutoTokenizer.from_pretrained('../../models/chatglm2-6b', trust_remote_code=True)
-# model = AutoModel.from_pretrained('../../models/chatglm2-6b', trust_remote_code=True).quantize(8).cuda()
+
+def c_eval(data_path, model_name_or_path, batch_size, extraction_prompt, save_path):
+    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
+    # model = AutoModel.from_pretrained(model_name_or_path, trust_remote_code=True).cuda()
+    model = load_model_on_gpus(model_name_or_path, num_gpus=2)
+    choice_tokens = [tokenizer.encode(choice, add_special_tokens=False)[0] for choice in 'ABCD']
+    acc_total, count_total, submit_dict = 0., 0, collections.defaultdict(dict)
+    with torch.no_grad():
+        for entry in glob.glob(data_path, recursive=True):
+            with open(entry, encoding='utf-8') as file:
+                dataset = [json.loads(line) for line in file.readlines()]
+            correct, task_name = 0, os.path.basename(entry).replace('.jsonl', '')
+            dataloader = DataLoader(dataset, batch_size=batch_size)
+            for batch in tqdm(dataloader):
+                ids, texts = batch['id'], batch['inputs_pretokenized']
+                inputs = [f'[Round 1]\n\n问：{text}\n\n答：' for text in texts]
+                inputs = tokenizer(inputs, padding=True, return_tensors='pt', truncation=True, max_length=2048).to('cuda')
+                outputs = model.generate(**inputs, do_sample=False, max_new_tokens=512)
+                outputs = [tokenizer.decode(out[len(inputs['input_ids'][i]):]) for i, out in enumerate(outputs.tolist())]
+
+                inputs = [text + out + '\n' + extraction_prompt for text, out in zip(texts, outputs)]
+                inputs = [f'[Round 1]\n\n问：{text}\n\n答：' for text in inputs]
+                inputs = tokenizer(inputs, padding=True, return_tensors='pt', truncation=True, max_length=2048).to('cuda')
+                outputs = model(**inputs, return_last_logit=True)
+
+                logits = outputs.logits[:, -1][:, choice_tokens]
+                preds = logits.argmax(dim=-1)
+                correct += sum(preds.cpu() == batch['label']).cpu().item()
+                for i, pre in zip(ids.cpu().numpy(), preds.cpu().numpy()):
+                    submit_dict[task_name][str(i)] = 'ABCD'[pre]
+            print(f'{task_name}: {correct / len(dataset)}')
+            acc_total += correct
+            count_total += len(dataset)
+    with open(os.path.basename(model_name_or_path) + '_' + save_path, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(submit_dict, ensure_ascii=False, indent=4))
+    print(f'Final CEval score: {acc_total / count_total}')
 
 
-choice_tokens = [tokenizer.encode(choice, add_special_tokens=False)[0] for choice in 'ABCD']
-extraction_prompt = '综上所述，ABCD中正确的选项是：'
-accuracy_dict, count_dict = {}, {}
-with torch.no_grad():
-    for entry in glob.glob('./CEval/test/**/*.jsonl', recursive=True):
-        dataset = []
-        with open(entry, encoding='utf-8') as file:
-            for line in file:
-                dataset.append(json.loads(line))
-        correct = 0
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=8)
-        for batch in tqdm(dataloader):
-            texts = batch['inputs_pretokenized']
-            print(len(texts))
-            print(batch['label'])
-            continue
-            print(f'{texts=}')
-            queries = [f'[Round 1]\n\n问：{query}\n\n答：' for query in texts]
-            inputs = tokenizer(queries, padding=True, return_tensors='pt', truncation=True, max_length=2048).to('cuda')
-            print(f'{inputs=}')
-            exit()
-            outputs = model.generate(**inputs, do_sample=False, max_new_tokens=512)
-            print(f'{outputs=}')
-            exit()
-            intermediate_outputs = []
-            for idx in range(len(outputs)):
-                output = outputs.tolist()[idx][len(inputs['input_ids'][idx]):]
-                response = tokenizer.decode(output)
-                intermediate_outputs.append(response)
-            answer_texts = [text + intermediate + '\n' + extraction_prompt for text, intermediate in
-                            zip(texts, intermediate_outputs)]
-            input_tokens = [f'[Round 1]\n\n问：{answer_text}\n\n答：' for answer_text in answer_texts]
-            inputs = tokenizer(input_tokens, padding=True, return_tensors='pt', truncation=True, max_length=2048).to('cuda')
-            outputs = model(**inputs, return_last_logit=True)
-            logits = outputs.logits[:, -1]
-            logits = logits[:, choice_tokens]
-            preds = logits.argmax(dim=-1)
-            correct += (preds.cpu() == batch['label']).sum().item()
-        accuracy = correct / len(dataset)
-        print(entry, accuracy)
-        accuracy_dict[entry] = accuracy
-        count_dict[entry] = len(dataset)
-
-acc_total, count_total = 0.0, 0
-for key in accuracy_dict:
-    acc_total += accuracy_dict[key] * count_dict[key]
-    count_total += count_dict[key]
-print(acc_total / count_total)
+if __name__ == '__main__':
+    c_eval('../../../data/CEval/test/**/*.jsonl', '../../../models/chatglm2-6b', 16, '综上所述，ABCD中正确的选项是：', 'tax.json')

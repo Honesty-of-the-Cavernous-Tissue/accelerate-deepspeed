@@ -7,9 +7,9 @@ import os
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
-tokenizer = AutoTokenizer.from_pretrained('../../models/chatglm2-6b', trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained('../../../models/chatglm2-6b', trust_remote_code=True)
 # model = AutoModel.from_pretrained('../../models/chatglm2-6b', trust_remote_code=True).cuda()
-model = load_model_on_gpus('../../models/chatglm2-6b', num_gpus=2)
+model = load_model_on_gpus('../../../models/chatglm2-6b', num_gpus=2)
 # model = PeftModel.from_pretrained(model, '../accelerate_deepspeed/testepoch_0_step_1035')
 
 model = model.eval()

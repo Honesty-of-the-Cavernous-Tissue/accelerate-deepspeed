@@ -3,9 +3,9 @@ import gc
 import json
 import hydra
 import torch
-import wandb
 import psutil
 import timeit
+import logging
 import warnings
 import threading
 import itertools
@@ -17,7 +17,6 @@ from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from accelerate import logging as ac_logging
 from deepspeed.utils import logger as ds_logging
-# from llama_patch import replace_attn_with_flash_attn
 from peft import LoraConfig, TaskType, get_peft_model
 from accelerate.utils import DummyOptim, DummyScheduler
 from transformers import AutoTokenizer, set_seed, AutoModel, AutoConfig, AutoModelForCausalLM, LlamaForCausalLM, LlamaTokenizer, LlamaConfig
@@ -25,21 +24,23 @@ from transformers import AutoTokenizer, set_seed, AutoModel, AutoConfig, AutoMod
 #     estimate_zero3_model_states_mem_needs_all_cold
 
 # ac_logging.info('main only', main_process_only=True)
+logging.basicConfig(level=logging.ERROR)
 ds_logging.setLevel('ERROR')
 warnings.filterwarnings('ignore')
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 ac_logger = (ac_logging.get_logger(__name__)).setLevel('ERROR')
-# replace_attn_with_flash_attn()
 
 
-def colorful(content, color=40, align='mid', width=30, unit='gb', rounding=2):
-    """ color map: {32: 'Green', 34: 'Blue', 36: 'Cyan', 40: 'White'} """
-    align_map = {'left': '<', 'right': '>', 'mid': '^'}
-    aligned = '\033{}{' + f':{align_map[align] + str(width)}' + '}\033[0m'
+def colorful(content, mode=7, front_color=40, back_color=';40', align='^', width=30, unit='gb', rounding=2):
+    """ Align_map: {'<': 'left', '>': 'right', '^': 'mid'} \n
+        Mode map: {0: 'Normal', 1: 'Bold/Highlight', 7: 'Reversed'}
+        Front color map: {30: 'Black', 32: 'Green', 34: 'Blue', 36: 'Cyan', 40: 'White'} \n
+        Back color map: {';40': 'Black', ';42': 'Green', ..., ';47': 'White'}  set `back_color` with '' to be default \n
+        Font map: {7: 'normal', 1: 'bold' ...} """
+    aligned = '\033[{}{' + f':{align + str(width)}' + '}\033[0m'
     if type(content) is float:
         rounded = '{' + f':.{rounding}' + 'f}'
-        return aligned.format(f'[7;{color};40m', rounded.format(content) + unit)
-    return aligned.format(f'[7;{color};40m', content)
+        return aligned.format(f'{mode};{front_color}{back_color}m', rounded.format(content) + unit)
+    return aligned.format(f'{mode};{front_color}{back_color}m', content)
 
 
 def bytes2gigabytes(x):
@@ -81,7 +82,7 @@ class TorchTraceMemAlloc:
                 break
 
     def memory_report(self, begin, used, peaked, map_name='GPU'):
-        self.accelerator.print(colorful(f'{map_name} Memory Usage', color=32, width=60))
+        self.accelerator.print(colorful(f'{map_name} Memory Usage', mode='1;7', front_color=32, width=60))
         self.accelerator.print(colorful('Before training') + colorful(begin))
         self.accelerator.print(colorful('After training') + colorful(used))
         self.accelerator.print(colorful('Peak during training') + colorful(peaked))
@@ -102,14 +103,13 @@ class TorchTraceMemAlloc:
 
         # Printing the GPU/CPU memory usage details and time consume
         self.accelerator.print()
-        hours, seconds = (t := timeit.default_timer() - self.time_begin) / 3600, t % 3600
-        hour_minutes = colorful(hours, unit=' hours ', width=20, rounding=0, align='right')
-        hour_minutes += colorful(seconds / 60, unit=' minutes', width=20, rounding=0, align='left')
-        self.accelerator.print(colorful('Time consume: ', width=20) + hour_minutes)
+        hours, seconds = divmod(timeit.default_timer() - self.time_begin, 3600)
+        setting = {'mode': '1;7', 'rounding': 0, 'front_color': 36}
+        hour_minute = colorful(hours, width=15, align='>', unit='h ', **setting)
+        hour_minute += colorful(seconds / 60, width=15, align='<', unit='min', **setting)
+        self.accelerator.print(colorful('Time consume: ', **setting) + hour_minute)
         self.memory_report(self.gpu_begin, self.gpu_used, self.gpu_peaked)
-        self.accelerator.print(colorful('', color=36, width=60))
         self.memory_report(self.cpu_begin, self.cpu_used, self.cpu_peaked, map_name='CPU')
-        # self.accelerator.print()
 
 
 @hydra.main(config_path='config', config_name='training')
@@ -134,22 +134,23 @@ def main(cfg):
         # prompt的label设置为-100，在训练时不纳入loss的计算 or use `DataCollatorForLanguageModeling` prompt纳入计算
         len_ids = [len(feature['input_ids']) for feature in features]
         longest = max(len_ids)
-        inputs, label_ids = [], []
+        inputs, labels = [], []
         for f_len, feature in sorted(zip(len_ids, features), key=lambda x: -x[0]):
             input_ids = feature['input_ids']
             prompt_len = feature['prompt_len']
-            labels = [-100] * (prompt_len - 1) + input_ids[prompt_len - 1:] + [-100] * (longest - f_len)
-            input_ids = input_ids + [tokenizer.pad_token_id] * (longest - f_len)
+            label_ids = [-100] * (prompt_len - 1) + input_ids[prompt_len - 1:] + [-100] * (longest - f_len)
+            input_ids = input_ids + [model_config.pad_token_id if cfg.pretrain_model_name == 'llama' else tokenizer.pad_token_id] * (longest - f_len)
             input_ids = torch.LongTensor(input_ids)
-            labels = torch.LongTensor(labels)
-            label_ids.append(labels)
+            label_ids = torch.LongTensor(label_ids)
+            labels.append(label_ids)
             inputs.append(input_ids)
         inputs = torch.stack(inputs)
-        labels = torch.stack(label_ids)
+        labels = torch.stack(labels)
         return {'input_ids': inputs, 'labels': labels}
 
-    wandb.init(project='test', config={'epoch': cfg.num_epochs})
-    accelerator = Accelerator()
+    # wandb.init(project='test', config={'epoch': cfg.num_epochs})
+    accelerator = Accelerator(log_with='wandb')
+    accelerator.init_trackers(f'{cfg.pretrain_model_name}-{os.path.basename(cfg.data_path)}-{timeit.default_timer()}')
     set_seed(cfg.seed)
     model_name_or_path = cfg.model_name_or_path
     pretrain_model_name = cfg.pretrain_model_name
@@ -160,18 +161,18 @@ def main(cfg):
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
         model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
-
     with accelerator.main_process_first():
         data_path = cfg.data_path
-        saved_path = data_path + f'_{cfg.data_percentage}.saved'
+        saved_path = data_path + f'_{cfg.pretrain_model_name}_{cfg.data_percentage}.saved'
         if os.path.isdir(saved_path):
+            accelerator.print(colorful(f'Using cache at {saved_path}, `preprocess` fn change may raise error', mode=1, front_color=34, back_color=''))
             train_dataset = Dataset.load_from_disk(saved_path)
         else:
             train_dataset = Dataset.from_generator(lambda: preprocess(data_path, True, cfg.data_percentage))
             train_dataset.save_to_disk(saved_path)
     accelerator.wait_for_everyone()
-
     train_dataloader = DataLoader(train_dataset, cfg.batch_size, True, collate_fn=data_collator, pin_memory=True)
+    # print(next(iter(train_dataloader)))
 
     # creating model
     from_pretrained_para = {'low_cpu_mem_usage': True} if accelerator.state.deepspeed_plugin.zero_stage == 2 else {}
@@ -183,10 +184,17 @@ def main(cfg):
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, **from_pretrained_para)
         peft_config = LoraConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1, target_modules=['W_pack'])
     elif pretrain_model_name == 'llama':
-        model = LlamaForCausalLM.from_pretrained(model_name_or_path)
+        model = LlamaForCausalLM.from_pretrained(model_name_or_path, **from_pretrained_para)
         peft_config = LoraConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1)
     else:
         raise ValueError('Invalid model name')
+
+    if cfg.use_flash_attention:
+        # from optimum.bettertransformer import BetterTransformer
+        # model = BetterTransformer.transform(model)
+
+        from llama_patch import replace_attn_with_flash_attn
+        replace_attn_with_flash_attn()
 
     # estimate_zero3_model_states_mem_needs_all_live(model, num_gpus_per_node=8, num_nodes=1)
     model.gradient_checkpointing_enable()
@@ -212,7 +220,8 @@ def main(cfg):
                 else:
                     loss = outputs.loss
                 pro_bar.update(i, [('loss', loss.detach().float().cpu().numpy())])
-                wandb.log({'loss': loss.detach().float().cpu().numpy()})
+                # wandb.log({'loss': loss.detach().float().cpu().numpy()})
+                accelerator.log({'loss': loss.detach().float().cpu().numpy()})
                 total_loss += loss.detach().float()
                 accelerator.backward(loss)
                 optimizer.step()
@@ -220,14 +229,15 @@ def main(cfg):
                 optimizer.zero_grad()
                 if i % cfg.save_per_steps == 0 or i == len(train_dataloader) - 1:
                     accelerator.wait_for_everyone()
-                    model.save_pretrained(cfg.model_save_path + f'/epoch_{epoch}_step_{i}')
+                    model.save_pretrained(cfg.model_save_path + f'epoch_{epoch}_step_{i}')
                     accelerator.wait_for_everyone()
 
         train_epoch_loss = total_loss / len(train_dataloader)
         train_ppl = torch.exp(train_epoch_loss)
         accelerator.print(f'{epoch = }: {train_ppl = } {train_epoch_loss = }')
 
-    wandb.finish()
+    # wandb.finish()
+    accelerator.end_training()
 
     # is_ds_zero_3 = False
     # if getattr(accelerator.state, 'deepspeed_plugin', None):
