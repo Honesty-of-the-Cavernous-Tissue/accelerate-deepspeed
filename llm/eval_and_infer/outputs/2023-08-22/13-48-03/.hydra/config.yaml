@@ -1,0 +1,11 @@
+num_gpus: 1
+quantize: 4
+batch_size: 2
+num_trans_layers: 28
+peft_model_path: ''
+save_path: tax.json
+dispatch_on_multi_gpu: false
+pretrain_model_name: chatglm
+extraction_prompt: 综上所述，ABCD中正确的选项是：
+data_path: ../../../data/CEval/test/**/*.jsonl
+model_name_or_path: ../../../models/chatglm2-6b

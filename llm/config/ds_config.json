@@ -31,6 +31,8 @@
             "pin_memory": true
         },
 
+        "allgather_partitions": true,
+        "reduce_scatter": true,
         "overlap_comm": true,
         "contiguous_gradients": true,
         "sub_group_size": 1e9,
@@ -49,6 +51,22 @@
         "top_modules": 1,
         "detailed": true,
         "output_file": "flops_profiler"
+    },
+
+    "activation_checkpointing": {
+        "partition_activations": true,
+        "cpu_checkpointing": false,
+        "contiguous_memory_optimization": false,
+        "number_checkpoints": null,
+        "synchronize_checkpoint_boundary": false,
+        "profile": false
+    },
+
+    "comms_logger": {
+          "enabled": false,
+          "verbose": false,
+          "prof_all": false,
+          "debug": false
     },
 
     "gradient_accumulation_steps": "auto",

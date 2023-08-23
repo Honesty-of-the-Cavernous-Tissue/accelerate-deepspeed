@@ -1,3 +1,6 @@
+if True:
+    import logging
+    logging.basicConfig(level=logging.ERROR)
 import os
 import gc
 import json
@@ -5,16 +8,15 @@ import hydra
 import torch
 import psutil
 import timeit
-import logging
 import warnings
 import threading
 import itertools
-
 from tqdm import tqdm
 from datasets import Dataset
 from keras.utils import Progbar
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
+from utils import colorful, bytes2gigabytes
 from accelerate import logging as ac_logging
 from deepspeed.utils import logger as ds_logging
 from peft import LoraConfig, TaskType, get_peft_model
@@ -24,28 +26,9 @@ from transformers import AutoTokenizer, set_seed, AutoModel, AutoConfig, AutoMod
 #     estimate_zero3_model_states_mem_needs_all_cold
 
 # ac_logging.info('main only', main_process_only=True)
-logging.basicConfig(level=logging.ERROR)
 ds_logging.setLevel('ERROR')
 warnings.filterwarnings('ignore')
 ac_logger = (ac_logging.get_logger(__name__)).setLevel('ERROR')
-
-
-def colorful(content, mode=7, front_color=40, back_color=';40', align='^', width=30, unit='gb', rounding=2):
-    """ Align_map: {'<': 'left', '>': 'right', '^': 'mid'} \n
-        Mode map: {0: 'Normal', 1: 'Bold/Highlight', 7: 'Reversed'}
-        Front color map: {30: 'Black', 32: 'Green', 34: 'Blue', 36: 'Cyan', 40: 'White'} \n
-        Back color map: {';40': 'Black', ';42': 'Green', ..., ';47': 'White'}  set `back_color` with '' to be default \n
-        Font map: {7: 'normal', 1: 'bold' ...} """
-    aligned = '\033[{}{' + f':{align + str(width)}' + '}\033[0m'
-    if type(content) is float:
-        rounded = '{' + f':.{rounding}' + 'f}'
-        return aligned.format(f'{mode};{front_color}{back_color}m', rounded.format(content) + unit)
-    return aligned.format(f'{mode};{front_color}{back_color}m', content)
-
-
-def bytes2gigabytes(x):
-    """ Converting Bytes to Megabytes """
-    return x / 2 ** 30
 
 
 class TorchTraceMemAlloc:
@@ -148,10 +131,10 @@ def main(cfg):
         labels = torch.stack(labels)
         return {'input_ids': inputs, 'labels': labels}
 
+    set_seed(cfg.seed)
     # wandb.init(project='test', config={'epoch': cfg.num_epochs})
     accelerator = Accelerator(log_with='wandb')
     accelerator.init_trackers(f'{cfg.pretrain_model_name}-{os.path.basename(cfg.data_path)}-{timeit.default_timer()}')
-    set_seed(cfg.seed)
     model_name_or_path = cfg.model_name_or_path
     pretrain_model_name = cfg.pretrain_model_name
 
@@ -184,7 +167,9 @@ def main(cfg):
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, **from_pretrained_para)
         peft_config = LoraConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1, target_modules=['W_pack'])
     elif pretrain_model_name == 'llama':
-        model = LlamaForCausalLM.from_pretrained(model_name_or_path, **from_pretrained_para)
+        if accelerator.state.deepspeed_plugin.zero_stage == 2:
+            from_pretrained_para['device_map'] = 'auto'
+        model = LlamaForCausalLM.from_pretrained(model_name_or_path, torch_dtype=torch.float16, **from_pretrained_para)
         peft_config = LoraConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1)
     else:
         raise ValueError('Invalid model name')

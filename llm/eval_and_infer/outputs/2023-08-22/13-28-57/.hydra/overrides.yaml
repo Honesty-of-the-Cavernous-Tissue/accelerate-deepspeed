@@ -1,0 +1,3 @@
+- quantize=4
+- dispatch_on_multi_gpu=False
+- batch_size=2
