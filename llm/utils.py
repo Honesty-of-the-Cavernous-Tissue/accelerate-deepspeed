@@ -1,16 +1,30 @@
+class Colorful:
+    def __call__(self, content, mode=7, front_color=40, back_color=';40', align='^', width=30, unit='gb', rounding=2):
+        """ Align_map: {'<': 'left', '>': 'right', '^': 'mid'} \n
+            Mode map: {0: 'Normal', 1: 'Bold/Highlight', 7: 'Reversed'} \n
+            Front color map: {30: 'Black', 32: 'Green', 34: 'Blue', 36: 'Cyan', 40: 'White'} \n
+            Back color map: {';40': 'Black', ';42': 'Green', ..., ';47': 'White'}  set `back_color` with '' to be default \n
+            Font map: {7: 'normal', 1: 'bold' ...} """
+        aligned = '\033[{}{' + f':{align + str(width)}' + '}\033[0m'
+        if type(content) is float:
+            rounded = '{' + f':.{rounding}' + 'f}'
+            return aligned.format(f'{mode};{front_color}{back_color}m', rounded.format(content) + unit)
+        return aligned.format(f'{mode};{front_color}{back_color}m', content)
 
+    def red(self, content):
+        return self.__call__(content, mode=1, front_color=31, back_color='')
 
-def colorful(content, mode=7, front_color=40, back_color=';40', align='^', width=30, unit='gb', rounding=2):
-    """ Align_map: {'<': 'left', '>': 'right', '^': 'mid'} \n
-        Mode map: {0: 'Normal', 1: 'Bold/Highlight', 7: 'Reversed'} \n
-        Front color map: {30: 'Black', 32: 'Green', 34: 'Blue', 36: 'Cyan', 40: 'White'} \n
-        Back color map: {';40': 'Black', ';42': 'Green', ..., ';47': 'White'}  set `back_color` with '' to be default \n
-        Font map: {7: 'normal', 1: 'bold' ...} """
-    aligned = '\033[{}{' + f':{align + str(width)}' + '}\033[0m'
-    if type(content) is float:
-        rounded = '{' + f':.{rounding}' + 'f}'
-        return aligned.format(f'{mode};{front_color}{back_color}m', rounded.format(content) + unit)
-    return aligned.format(f'{mode};{front_color}{back_color}m', content)
+    def green(self, content):
+        return self.__call__(content, mode=1, front_color=32, back_color='')
+
+    def blue(self, content):
+        return self.__call__(content, mode=1, front_color=34, back_color='')
+
+    def white(self, content):
+        return self.__call__(content, mode=1, front_color=37, back_color='')
+
+    def yellow(self, content):
+        return self.__call__(content, mode=1, front_color=37, back_color='')
 
 
 def bytes2gigabytes(x):
@@ -48,3 +62,9 @@ def load_model_on_gpus(model, num_gpus=2, device_map=None, num_trans_layers=28):
         device_map = auto_configure_device_map(num_gpus, device_map, num_trans_layers)
         model = dispatch_model(model, device_map=device_map)
     return model
+
+
+def check_model_para(model):
+    print(model.state_dict)
+    for name, para in model.named_parameters():
+        print(f'{name:} {para.size()}', f'{para.requires_grad=}')

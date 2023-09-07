@@ -55,14 +55,6 @@ def forward(
     cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
-    # Past Key value support
-    if past_key_value is not None:
-        # reuse k, v, self_attention
-        key_states = torch.cat([past_key_value[0], key_states], dim=2)
-        value_states = torch.cat([past_key_value[1], value_states], dim=2)
-
-    past_key_value = (key_states, value_states) if use_cache else None
-
     # Flash attention codes from
     # https://github.com/HazyResearch/flash-attention/blob/main/flash_attn/flash_attention.py
 
@@ -92,7 +84,7 @@ def forward(
             "b s (h d) -> b s h d",
             h=nheads,
         )
-    return self.o_proj(rearrange(output, "b s h d -> b s (h d)")), None, past_key_value
+    return self.o_proj(rearrange(output, "b s h d -> b s (h d)")), None, None
 
 
 # Disable the transformation of the attention mask in LlamaModel as the flash attention

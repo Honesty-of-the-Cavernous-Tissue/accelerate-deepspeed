@@ -1,18 +1,10 @@
 seed: 42
 lr: 5.0e-5
 batch_size: 1
-num_epochs: 4
+num_epochs: 1
 max_length: 2048
-skip_overlong: true
-save_per_steps: 200
 data_percentage: 1
-use_flash_attention: false
-
-
-label_column_name: 'output'
-prompt_column_name: 'input'
-model_save_path: 'lora_model/'
-data_path: '/work/zhangyaqing/data/Tax/tax.json'
+save_per_steps: 1000
 
 
 # *Optional*
@@ -20,7 +12,26 @@ pretrain_model_name: 'chatglm'
 #  - 'llama'
 #  - 'baichuan'
 
+
+use_peft: true
+mp_data_gen: false
+skip_overlong: true
+merge_tokens: false
+use_flash_attention: false
+
+
+label_column_name: 'output'
+prompt_column_name: 'input'
+model_save_path: 'lora_model/'
+data_path: '/work/zhangyaqing/data/Tax/tax.json'
 model_name_or_path: '/work/zhangyaqing/models/chatglm2-6b'
-#  - '/work/zhangyaqing/models/llama-2-13b'
 
 
+lora_config:
+  r: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+  target_modules:
+    chatglm: ['word_embeddings', 'query_key_value']
+    llama: ['q_proj', 'v_proj', 'k_proj', 'o_proj', 'embed_tokens']
+    baichuan: ['W_pack']
