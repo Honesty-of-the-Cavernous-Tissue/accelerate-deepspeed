@@ -19,7 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import AutoTokenizer, AutoModel, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM
 
 
-def init_tokenizer_and_model(cfg, rank):
+def init_tokenizer_and_model(cfg):
     if cfg.pretrain_model_name == 'chatglm':
         tokenizer = AutoTokenizer.from_pretrained(cfg.model_name_or_path, trust_remote_code=True)
         model = AutoModel.from_pretrained(cfg.model_name_or_path, trust_remote_code=True, low_cpu_mem_usage=True)
@@ -47,7 +47,7 @@ def init_tokenizer_and_model(cfg, rank):
         else:
             model = AutoModelForCausalLM.from_pretrained(cfg.model_name_or_path, trust_remote_code=True, **init_args)
     if cfg.peft_model_path:
-        model = PeftModel.from_pretrained(model, cfg.peft_model_path, device=f'cuda:{rank}')
+        model = PeftModel.from_pretrained(model, cfg.peft_model_path)
     if cfg.use_ds:
         model = deepspeed.init_inference(model, tensor_parallel={'tp_size': cfg.num_gpus}, dtype=torch.float16, kernel_inject=True)
     return tokenizer, model
@@ -112,10 +112,10 @@ def ddp_dataloader(rank, world_size, dataset):
 
 
 def run_inference(rank):
-    dist.init_process_group("nccl", rank=rank, world_size=config.world_size)
+    dist.init_process_group('nccl', rank=rank, world_size=config.world_size)
     dataset, count_total, count_tax = init_dataset(config)
     dataloader = ddp_dataloader(rank, config.world_size, dataset)
-    tokenizer, model = init_tokenizer_and_model(config, rank)
+    tokenizer, model = init_tokenizer_and_model(config)
     model.to(rank)
     batch_fn(dataloader, tokenizer, model, rank)
 
@@ -133,17 +133,21 @@ def c_eval(cfg):
         runtime_summery(count_tax, count_all, tax_correct, all_correct, submit_dict)
 
 
-config = OmegaConf.load('../config/CEval.yaml')
-# config.pretrain_model_name = 'baichuan'
-# config.model_name_or_path = '../../../models/Baichuan-13B-Chat'
-# config.batch_size = 16
-# config.use_ddp = False
-# config.num_gpus = 8
-config.peft_model_path = '../outputs/chatglm2-6b-tax/lora_model/epoch_4_step_1063'
-# start_time = timeit.default_timer()
-# tokenizer, model = init_tokenizer_and_model(config)
-# print(rank)
+def acc_c_eval(cfg):
+    accelerator = Accelerator()
+    tokenizer, model = init_tokenizer_and_model(cfg)
+    dataset, count_all, count_tax = init_dataset(cfg)
+    dataloader = DataLoader(dataset, cfg.batch_size)
+
+    model, dataloader = accelerator.prepare(model, dataloader)
+
+    batch_fn(dataloader, tokenizer, model)
+
+
 colorful = Colorful()
+start_time = timeit.default_timer()
+config = OmegaConf.load('../config/CEval.yaml')
+config.peft_model_path = '../outputs/chatglm2-6b-tax/lora_model/epoch_4_step_1063'
 
 if __name__ == '__main__':
     if config.use_ddp:

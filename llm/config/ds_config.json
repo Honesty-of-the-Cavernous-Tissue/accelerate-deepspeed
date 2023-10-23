@@ -1,5 +1,5 @@
 {
-    "fp16": {
+    "bf16": {
         "enabled": true
     },
 
@@ -20,31 +20,14 @@
         }
     },
 
-    "scheduler": {
-        "type": "LRRangeTest",
-        "params": {
-            "lr_range_test_min_lr": 0.0001,
-            "lr_range_test_step_size": 200,
-            "lr_range_test_step_rate": 5,
-            "lr_range_test_staircase": false
-        }
-    },
-
-    "OneCycle": {
-        "cycle_min_lr": 0.002,
-        "cycle_max_lr": 0.005,
-        "cycle_first_step_size": 2000,
-        "cycle_second_step_size": 2000
-    },
-
     "zero_optimization": {
         "stage": 3,
         "offload_optimizer": {
-            "device": "cpu",
+            "device": "none",
             "pin_memory": true
         },
         "offload_param": {
-            "device": "cpu",
+            "device": "none",
             "pin_memory": true
         },
 

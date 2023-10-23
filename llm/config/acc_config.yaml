@@ -14,4 +14,8 @@ rdzv_backend: static
 megatron_lm_config: {}
 main_training_function: main
 
+main_process_ip: null
+main_process_port: null
+mixed_precision: bf16
+
 

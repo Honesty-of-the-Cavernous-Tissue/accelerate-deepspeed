@@ -1,5 +1,4 @@
-import argparse, os
-os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+import os
 import cv2
 import torch
 import numpy as np
@@ -73,7 +72,7 @@ def main(opt):
         sampler = DDIMSampler(model, device=device)
 
     os.makedirs(opt.outdir, exist_ok=True)
-    outpath = opt.outdir
+    output_path = opt.outdir
 
     print('Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...')
     wm = 'SDV2'
@@ -92,11 +91,11 @@ def main(opt):
             data = [p for p in data for _ in range(opt.repeat)]
             data = list(chunk(data, batch_size))
 
-    sample_path = os.path.join(outpath, 'samples')
+    sample_path = os.path.join(output_path, 'samples')
     os.makedirs(sample_path, exist_ok=True)
     sample_count = 0
     base_count = len(os.listdir(sample_path))
-    grid_count = len(os.listdir(outpath)) - 1
+    grid_count = len(os.listdir(output_path)) - 1
 
     start_code = None
     if opt.fixed_code:
@@ -162,15 +161,8 @@ def main(opt):
         with torch.no_grad(), additional_context:
             for _ in range(3):
                 c = model.get_learned_conditioning(prompts)
-            samples_ddim, _ = sampler.sample(S=5,
-                                             conditioning=c,
-                                             batch_size=batch_size,
-                                             shape=shape,
-                                             verbose=False,
-                                             unconditional_guidance_scale=opt.scale,
-                                             unconditional_conditioning=uc,
-                                             eta=opt.ddim_eta,
-                                             x_T=start_code)
+            samples_ddim, _ = sampler.sample(S=5, conditioning=c, batch_size=batch_size, shape=shape, verbose=False,
+                                             unconditional_guidance_scale=opt.scale, unconditional_conditioning=uc, eta=opt.ddim_eta, x_T=start_code)
             print('Running a forward pass for decoder')
             for _ in range(3):
                 x_samples_ddim = model.decode_first_stage(samples_ddim)
@@ -213,13 +205,12 @@ def main(opt):
         grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
         grid = Image.fromarray(grid.astype(np.uint8))
         grid = put_watermark(grid, wm_encoder)
-        grid.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
+        grid.save(os.path.join(output_path, f'grid-{grid_count:04}.png'))
         grid_count += 1
 
-    print(f'Your samples are ready and waiting for you here: \n{outpath} \n\nEnjoy.')
+    print(f'Your samples are ready and waiting for you here: \n{output_path} \n\nEnjoy.')
 
 
 if __name__ == '__main__':
-    from omegaconf import OmegaConf
-    cfg = OmegaConf.load('../configs/eval.yaml')
+    cfg = OmegaConf.load('configs/eval.yaml')
     main(cfg)

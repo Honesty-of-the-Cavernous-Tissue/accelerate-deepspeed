@@ -1,6 +1,6 @@
 num_gpus: 1
 quantize: 0
-use_ddp: true
+use_ddp: false
 use_ds: false
 batch_size: 16
 world_size: 8

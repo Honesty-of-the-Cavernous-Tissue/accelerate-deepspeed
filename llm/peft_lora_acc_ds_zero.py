@@ -1,6 +1,3 @@
-if True:
-    import logging
-    logging.basicConfig(level=logging.ERROR)
 import os
 import gc
 import json
@@ -9,29 +6,33 @@ import hydra
 import torch
 import psutil
 import timeit
+import logging
 import datetime
 import warnings
 import threading
 import itertools
+import torch.distributed as dist
+
 from tqdm import tqdm
 from datasets import Dataset
 from keras.utils import Progbar
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from utils import Colorful, bytes2gigabytes
-from accelerate import logging as ac_logging
 from deepspeed.utils import logger as ds_logging
 from tokenization_chatglm import ChatGLMTokenizer
 from peft import LoraConfig, TaskType, get_peft_model
 from accelerate.utils import DummyOptim, DummyScheduler
-from transformers import AutoTokenizer, set_seed, AutoModel, AutoConfig, AutoModelForCausalLM, LlamaForCausalLM, LlamaTokenizer, LlamaConfig
+from transformers import AutoTokenizer, set_seed, AutoModel, AutoModelForCausalLM, LlamaForCausalLM, LlamaTokenizer
 # from deepspeed.runtime.zero.stage3 import estimate_zero3_model_states_mem_needs_all_live, estimate_zero3_model_states_mem_needs_all_cold
 
-# ac_logging.info('main only', main_process_only=True)
+
 colorful = Colorful()
 ds_logging.setLevel('ERROR')
 warnings.filterwarnings('ignore')
-ac_logger = (ac_logging.get_logger(__name__)).setLevel('ERROR')
+logging.basicConfig(level=logging.ERROR)
+logging.getLogger('torch.distributed.distributed_c10d').setLevel(logging.ERROR)
+dist.init_process_group(backend="nccl", timeout=datetime.timedelta(seconds=100000))
 
 
 class TorchTraceMemAlloc:
@@ -89,11 +90,7 @@ class TorchTraceMemAlloc:
 
         # Printing the GPU/CPU memory usage details and time consume
         self.accelerator.print()
-        hours, seconds = divmod(timeit.default_timer() - self.time_begin, 3600)
-        setting = {'mode': '1;7', 'rounding': 0, 'front_color': 36}
-        hour_minute = colorful(hours, width=15, align='>', unit='h ', **setting)
-        hour_minute += colorful(seconds / 60, width=15, align='<', unit='min', **setting)
-        self.accelerator.print(colorful('Time consume: ', **setting) + hour_minute)
+        self.accelerator.print(colorful.timer(self.time_begin))
         self.memory_report(self.gpu_begin, self.gpu_used, self.gpu_peaked)
         self.memory_report(self.cpu_begin, self.cpu_used, self.cpu_peaked, map_name='CPU')
 
@@ -120,29 +117,28 @@ def init_model(cfg, accelerator, model_name_or_path, pretrain_model_name):
         from llama_patch import replace_attn_with_flash_attn
         replace_attn_with_flash_attn()
 
-    tokenizer, model_config = init_tokenizer(cfg, model, accelerator, model_name_or_path, pretrain_model_name)
+    model, tokenizer = init_tokenizer(cfg, model, accelerator, model_name_or_path, pretrain_model_name)
 
     if cfg.use_peft:
         lora_config = cfg.lora_config
         init_kwargs = {'r': lora_config['r'], 'lora_alpha': lora_config['lora_alpha'], 'lora_dropout': lora_config['lora_dropout'], 'target_modules': [*lora_config['target_modules'][pretrain_model_name]]}
         lora_config = LoraConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, **init_kwargs)
         model = get_peft_model(model, lora_config)
-        model.print_trainable_parameters()
+        trainable_para, all_para = model.get_nb_trainable_parameters()
+        accelerator.print(colorful.green(f'trainable params: {trainable_para:,d} || all params: {all_para:,d} || trainable%: {trainable_para / all_para:.7%}'))
 
     # estimate_zero3_model_states_mem_needs_all_live(model, num_gpus_per_node=8, num_nodes=1)
     model.gradient_checkpointing_enable()
     model.enable_input_require_grads()
     model.config.use_cache = False
-    return model, tokenizer, model_config
+    return model, tokenizer
 
 
 def init_tokenizer(cfg, model, accelerator, model_name_or_path, pretrain_model_name):
     if pretrain_model_name == 'llama':
         tokenizer = LlamaTokenizer.from_pretrained(model_name_or_path)
-        model_config = LlamaConfig.from_pretrained(model_name_or_path)
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
-        model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
     if cfg.merge_tokens:
         merged_tokenizer = ChatGLMTokenizer.from_pretrained(model_name_or_path + '/merged_tokenizer')
         vocabs = tokenizer.get_vocab()
@@ -154,10 +150,10 @@ def init_tokenizer(cfg, model, accelerator, model_name_or_path, pretrain_model_n
         else:
             model.resize_token_embeddings(len(tokenizer))
         accelerator.print(colorful.green(content=f'Successful resized tokens from `{len(vocabs)}` to `{len(tokenizer)}`'))
-    return tokenizer, model_config
+    return model, tokenizer
 
 
-def gen_data(cfg, tokenizer, model_config, is_train=True):
+def gen_data(cfg, tokenizer, is_train=True):
     assert cfg.data_path.endswith('.json'), 'Unsupported file type'
     with (open(cfg.data_path, 'r') as f):
         line = json.load(f)
@@ -167,27 +163,25 @@ def gen_data(cfg, tokenizer, model_config, is_train=True):
             prompt = ''.join(itertools.chain.from_iterable(history)) + prompt
             prompt_ids = tokenizer.encode(prompt, max_length=cfg.max_length, truncation=True)
             label_ids = tokenizer.encode(label, max_length=cfg.max_length, truncation=True, add_special_tokens=False)
-            eos_token_id = model_config.eos_token_id
+            eos_token_id = tokenizer.eos_token_id
             input_ids = prompt_ids + label_ids + [eos_token_id] if is_train else [eos_token_id] + prompt_ids
             if len(input_ids) > cfg.max_length and cfg.skip_overlong:
                 continue
             yield {'input_ids': input_ids[:cfg.max_length], 'prompt_len': len(prompt_ids)}
 
 
-def gen_from_shards(shards, cfg, tokenizer, model_config):
+def gen_from_shards(shards, cfg, tokenizer):
     for shard in shards:
         with open(shard, 'r') as f:
             for line in tqdm(f.readlines()):
                 input_ids = tokenizer.encode(line, max_length=cfg.max_length, truncation=True, add_special_tokens=False)
-                input_ids += [model_config.eos_token_id]
-                yield {'input_ids': input_ids[:cfg.max_length], 'prompt_len': len(input_ids)}
+                yield {'input_ids': input_ids[:cfg.max_length], 'prompt_len': 0}
 
 
 class DataCollator:
-    def __init__(self, cfg, tokenizer, model_config):
+    def __init__(self, cfg, tokenizer):
         self.cfg = cfg
         self.tokenizer = tokenizer
-        self.model_config = model_config
 
     def __call__(self, features):
         input_len = [len(feature['input_ids']) for feature in features]
@@ -196,8 +190,11 @@ class DataCollator:
         for f_len, feature in sorted(zip(input_len, features), key=lambda x: -x[0]):
             input_ids = feature['input_ids']
             prompt_len = feature['prompt_len']
-            label_ids = [-100] * prompt_len + input_ids[prompt_len:] + [-100] * (longest - f_len)
-            input_ids += [self.model_config.pad_token_id if self.cfg.pretrain_model_name == 'llama' else self.tokenizer.pad_token_id] * (longest - f_len)
+            if prompt_len == 0:
+                label_ids = input_ids[1:] + [self.tokenizer.eos_token_id] + [-100] * (longest - f_len)
+            else:
+                label_ids = [-100] * prompt_len + input_ids[prompt_len:] + [-100] * (longest - f_len)
+            input_ids += [self.tokenizer.unk_token_id if self.cfg.pretrain_model_name == 'llama' else self.tokenizer.pad_token_id] * (longest - f_len)
             input_ids = torch.LongTensor(input_ids)
             label_ids = torch.LongTensor(label_ids)
             labels.append(label_ids)
@@ -207,7 +204,7 @@ class DataCollator:
         return {'input_ids': inputs, 'labels': labels}
 
 
-def init_dataloader(cfg, accelerator, tokenizer, model_config):
+def init_dataloader(cfg, accelerator, tokenizer):
     with accelerator.main_process_first():
         saved_path = cfg.data_path + f'_{cfg.pretrain_model_name}_{cfg.data_percentage}.saved'
         if os.path.isdir(saved_path):
@@ -216,15 +213,16 @@ def init_dataloader(cfg, accelerator, tokenizer, model_config):
         else:
             if cfg.mp_data_gen:
                 shards = [*glob.glob(cfg.data_path + '/*.txt', recursive=True)]
-                gen_kwargs = {'shards': shards, 'cfg': cfg, 'tokenizer': tokenizer, 'model_config': model_config}
+                gen_kwargs = {'shards': shards, 'cfg': cfg, 'tokenizer': tokenizer}
                 train_dataset = Dataset.from_generator(gen_from_shards, gen_kwargs=gen_kwargs, num_proc=min(os.cpu_count(), len(shards)))
                 train_dataset.save_to_disk(saved_path, num_shards=len(shards), num_proc=len(shards))
             else:
-                train_dataset = Dataset.from_generator(lambda: gen_data(cfg, tokenizer, model_config))
+                train_dataset = Dataset.from_generator(lambda: gen_data(cfg, tokenizer))
                 train_dataset.save_to_disk(saved_path)
     accelerator.wait_for_everyone()
-    data_collator = DataCollator(cfg, tokenizer, model_config)
-    train_dataloader = DataLoader(train_dataset, cfg.batch_size, collate_fn=data_collator, pin_memory=True)
+    data_collator = DataCollator(cfg, tokenizer)
+    # sampler = BatchSampler(RandomSampler(train_dataset, num_samples=cfg.num_samples), cfg.batch_size, drop_last=False)
+    train_dataloader = DataLoader(train_dataset, cfg.batch_size, shuffle=True, collate_fn=data_collator, pin_memory=True)
     return train_dataloader
 
 
@@ -234,7 +232,6 @@ def save_model(cfg, model, accelerator, epoch, step, last_step):
         if not cfg.use_peft and accelerator.state.deepspeed_plugin.zero_stage == 3:
             model.save_checkpoint(cfg.model_save_path + f'epoch_{epoch + 1}_step_{step + 1}')
             accelerator.print(colorful.green('Successful saved by `DeepSpeed ZeRO-3` in `FP32`, need to be converted manually'))
-
         else:
             model.save_pretrained(cfg.model_save_path + f'epoch_{epoch + 1}_step_{step + 1}')
         accelerator.wait_for_everyone()
@@ -248,8 +245,8 @@ def main(cfg):
     with accelerator.main_process_first():
         accelerator.init_trackers(f'{os.path.basename(cfg.model_name_or_path)}-{os.path.basename(cfg.data_path)}-{datetime.datetime.now().strftime("%Y-%m-%d-%H-%m")}')
     model_name_or_path, pretrain_model_name = cfg.model_name_or_path, cfg.pretrain_model_name
-    model, tokenizer, model_config = init_model(cfg, accelerator, model_name_or_path, pretrain_model_name)
-    train_dataloader = init_dataloader(cfg, accelerator, tokenizer, model_config)
+    model, tokenizer = init_model(cfg, accelerator, model_name_or_path, pretrain_model_name)
+    train_dataloader = init_dataloader(cfg, accelerator, tokenizer)
 
     optimizer = DummyOptim(model.parameters(), lr=cfg.lr)
     lr_scheduler = DummyScheduler(optimizer, num_warmup_steps=0, num_training_steps=(len(train_dataloader) * cfg.num_epochs))
