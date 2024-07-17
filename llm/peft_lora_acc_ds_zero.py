@@ -23,7 +23,7 @@ from deepspeed.utils import logger as ds_logging
 from tokenization_chatglm import ChatGLMTokenizer
 from peft import LoraConfig, TaskType, get_peft_model
 from accelerate.utils import DummyOptim, DummyScheduler
-from transformers import AutoTokenizer, set_seed, AutoModel, AutoModelForCausalLM, LlamaForCausalLM, LlamaTokenizer
+from transformers import AutoTokenizer, set_seed, AutoModel, AutoModelForCausalLM, AutoProcessor
 # from deepspeed.runtime.zero.stage3 import estimate_zero3_model_states_mem_needs_all_live, estimate_zero3_model_states_mem_needs_all_cold
 
 
@@ -97,19 +97,21 @@ class TorchTraceMemAlloc:
 
 def init_model(cfg, accelerator, model_name_or_path, pretrain_model_name):
     init_args = {'low_cpu_mem_usage': True} if accelerator.state.deepspeed_plugin.zero_stage == 2 else {}
-    match pretrain_model_name:
-        case 'chatglm':
-            model = AutoModel.from_pretrained(model_name_or_path, trust_remote_code=True, empty_init=False, **init_args)
-        case 'baichuan':
-            if accelerator.state.deepspeed_plugin.zero_stage == 2:
-                init_args['device_map'] = 'auto'
-            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, **init_args)
-        case 'llama':
-            # if accelerator.state.deepspeed_plugin.zero_stage == 2:
-            #     init_args['device_map'] = 'auto'
-            model = LlamaForCausalLM.from_pretrained(model_name_or_path, torch_dtype=torch.float16, **init_args)
-        case _:
-            raise ValueError('Invalid model name')
+    model = AutoModel.from_pretrained(model_name_or_path, trust_remote_code=True, **init_args)
+
+    # match pretrain_model_name:
+    #     case 'chatglm':
+    #         model = AutoModel.from_pretrained(model_name_or_path, trust_remote_code=True, empty_init=False, **init_args)
+    #     case 'baichuan':
+    #         if accelerator.state.deepspeed_plugin.zero_stage == 2:
+    #             init_args['device_map'] = 'auto'
+    #         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, **init_args)
+    #     case 'llama':
+    #         # if accelerator.state.deepspeed_plugin.zero_stage == 2:
+    #         #     init_args['device_map'] = 'auto'
+    #         model = LlamaForCausalLM.from_pretrained(model_name_or_path, torch_dtype=torch.float16, **init_args)
+    #     case _:
+    #         raise ValueError('Invalid model name')
 
     if cfg.use_flash_attention:
         # from optimum.bettertransformer import BetterTransformer
@@ -118,6 +120,7 @@ def init_model(cfg, accelerator, model_name_or_path, pretrain_model_name):
         replace_attn_with_flash_attn()
 
     model, tokenizer = init_tokenizer(cfg, model, accelerator, model_name_or_path, pretrain_model_name)
+    processor = AutoProcessor.from_pretrained(model_name_or_path)
 
     if cfg.use_peft:
         lora_config = cfg.lora_config
@@ -135,27 +138,26 @@ def init_model(cfg, accelerator, model_name_or_path, pretrain_model_name):
 
 
 def init_tokenizer(cfg, model, accelerator, model_name_or_path, pretrain_model_name):
-    if pretrain_model_name == 'llama':
-        tokenizer = LlamaTokenizer.from_pretrained(model_name_or_path)
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
-    if cfg.merge_tokens:
-        merged_tokenizer = ChatGLMTokenizer.from_pretrained(model_name_or_path + '/merged_tokenizer')
-        vocabs = tokenizer.get_vocab()
-        merged_vocabs = merged_tokenizer.get_vocab()
-        new_tokens = set(merged_vocabs.keys()) - set(vocabs.keys())
-        tokenizer.add_tokens([*new_tokens])
-        if pretrain_model_name == 'chatglm':
-            model.base_model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
-        else:
-            model.resize_token_embeddings(len(tokenizer))
-        accelerator.print(colorful.green(content=f'Successful resized tokens from `{len(vocabs)}` to `{len(tokenizer)}`'))
+    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True, use_fast=True, split_sepcial_token=True, padding_side='right')
+
+    # Deprecate
+    # if cfg.merge_tokens:
+    #     merged_tokenizer = ChatGLMTokenizer.from_pretrained(model_name_or_path + '/merged_tokenizer')
+    #     vocabs = tokenizer.get_vocab()
+    #     merged_vocabs = merged_tokenizer.get_vocab()
+    #     new_tokens = set(merged_vocabs.keys()) - set(vocabs.keys())
+    #     tokenizer.add_tokens([*new_tokens])
+    #     if pretrain_model_name == 'chatglm':
+    #         model.base_model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
+    #     else:
+    #         model.resize_token_embeddings(len(tokenizer))
+    #     accelerator.print(colorful.green(content=f'Successful resized tokens from `{len(vocabs)}` to `{len(tokenizer)}`'))
     return model, tokenizer
 
 
 def gen_data(cfg, tokenizer, is_train=True):
     assert cfg.data_path.endswith('.json'), 'Unsupported file type'
-    with (open(cfg.data_path, 'r') as f):
+    with open(cfg.data_path) as f:
         line = json.load(f)
         for example in tqdm(line[:int(cfg.data_percentage * len(line))]):
             prompt, label = example[cfg.prompt_column_name], example[cfg.label_column_name]
@@ -244,6 +246,7 @@ def main(cfg):
     accelerator = Accelerator(log_with='wandb')
     with accelerator.main_process_first():
         accelerator.init_trackers(f'{os.path.basename(cfg.model_name_or_path)}-{os.path.basename(cfg.data_path)}-{datetime.datetime.now().strftime("%Y-%m-%d-%H-%m")}')
+
     model_name_or_path, pretrain_model_name = cfg.model_name_or_path, cfg.pretrain_model_name
     model, tokenizer = init_model(cfg, accelerator, model_name_or_path, pretrain_model_name)
     train_dataloader = init_dataloader(cfg, accelerator, tokenizer)
